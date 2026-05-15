@@ -67,10 +67,10 @@ app.post("/webhook", async (req, res) => {
 
                 const value = change.value;
 
-                const commentId = value.comment_id;
                 const message = value.message || "";
 
                 const fromName = value.from?.name || "Unknown";
+
                 const fromId = value.from?.id || "";
 
                 console.log("NEW COMMENT:", message);
@@ -78,7 +78,7 @@ app.post("/webhook", async (req, res) => {
                 console.log("FROM ID:", fromId);
 
 
-                // CHẶN BOT TỰ SPAM
+                // CHẶN COMMENT CỦA PAGE
                 if (fromId === PAGE_ID) {
 
                     console.log("IGNORE PAGE COMMENT");
@@ -88,27 +88,16 @@ app.post("/webhook", async (req, res) => {
 
 
                 // BỎ QUA COMMENT RỖNG
-                if (!message) {
+                if (!message || message.length < 2) {
+
+                    console.log("EMPTY COMMENT");
+
                     continue;
                 }
 
 
-                // REPLY COMMENT
-                await axios.post(
-                    `https://graph.facebook.com/v23.0/${commentId}/comments`,
-                    {
-                        message:
-`Anh/chị xem ib nhé ❤️
-
-💰 Báo giá:
-0.9x2m-50: 250k
-0.9x4m-50: 400k
-
-🎁 Mua 5 tặng 2
-🚚 Miễn phí vận chuyển`,
-                        access_token: PAGE_TOKEN
-                    }
-                );
+                // KHÔNG AUTO REPLY FACEBOOK
+                console.log("SKIP FACEBOOK REPLY");
 
 
                 // SEND TELEGRAM
@@ -132,7 +121,7 @@ app.post("/webhook", async (req, res) => {
                     }
                 );
 
-                console.log("DONE");
+                console.log("TELEGRAM SENT");
             }
         }
 
@@ -153,5 +142,7 @@ app.post("/webhook", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
+
     console.log(`Server running on ${PORT}`);
+
 });
