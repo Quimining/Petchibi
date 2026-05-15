@@ -15,6 +15,8 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
+const PAGE_ID = process.env.PAGE_ID;
+
 
 // HOME
 app.get("/", (req, res) => {
@@ -51,38 +53,70 @@ app.post("/webhook", async (req, res) => {
 
     try {
 
-        const entry = req.body.entry?.[0];
-        const change = entry?.changes?.[0];
+        if (req.body.object !== "page") {
+            return res.sendStatus(404);
+        }
 
-        if (change?.field === "feed") {
+        for (const entry of req.body.entry) {
 
-            const value = change.value;
+            for (const change of entry.changes) {
 
-            const commentId = value.comment_id;
-
-            const message = value.message || "";
-
-            const fromName = value.from?.name || "Unknown";
-
-            console.log("NEW COMMENT:", message);
-
-
-            // REPLY COMMENT
-            await axios.post(
-                `https://graph.facebook.com/v23.0/${commentId}/comments`,
-                {
-                    message: "Anh/chị xem ib nhé ❤️",
-                    access_token: PAGE_TOKEN
+                if (change.field !== "feed") {
+                    continue;
                 }
-            );
+
+                const value = change.value;
+
+                const commentId = value.comment_id;
+                const message = value.message || "";
+
+                const fromName = value.from?.name || "Unknown";
+                const fromId = value.from?.id || "";
+
+                console.log("NEW COMMENT:", message);
+                console.log("FROM:", fromName);
+                console.log("FROM ID:", fromId);
 
 
-            // SEND TELEGRAM
-            await axios.post(
-                `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
-                {
-                    chat_id: CHAT_ID,
-                    text:
+                // CHẶN BOT TỰ SPAM
+                if (fromId === PAGE_ID) {
+
+                    console.log("IGNORE PAGE COMMENT");
+
+                    continue;
+                }
+
+
+                // BỎ QUA COMMENT RỖNG
+                if (!message) {
+                    continue;
+                }
+
+
+                // REPLY COMMENT
+                await axios.post(
+                    `https://graph.facebook.com/v23.0/${commentId}/comments`,
+                    {
+                        message:
+`Anh/chị xem ib nhé ❤️
+
+💰 Báo giá:
+0.9x2m-50: 250k
+0.9x4m-50: 400k
+
+🎁 Mua 5 tặng 2
+🚚 Miễn phí vận chuyển`,
+                        access_token: PAGE_TOKEN
+                    }
+                );
+
+
+                // SEND TELEGRAM
+                await axios.post(
+                    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
+                    {
+                        chat_id: CHAT_ID,
+                        text:
 `📢 Có khách mới comment
 
 👤 ${fromName}
@@ -95,13 +129,14 @@ app.post("/webhook", async (req, res) => {
 
 🎁 Mua 5 tặng 2
 🚚 Miễn phí vận chuyển`
-                }
-            );
+                    }
+                );
 
-            console.log("DONE");
+                console.log("DONE");
+            }
         }
 
-        res.sendStatus(200);
+        return res.sendStatus(200);
 
     } catch (err) {
 
@@ -109,7 +144,7 @@ app.post("/webhook", async (req, res) => {
             err.response?.data || err.message
         );
 
-        res.sendStatus(500);
+        return res.sendStatus(500);
     }
 });
 
