@@ -7,6 +7,8 @@ const app = express();
 
 app.use(express.json());
 
+
+// ENV
 const PAGE_TOKEN = process.env.PAGE_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
@@ -14,31 +16,37 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
 
-// Trang chủ
+// HOME
 app.get("/", (req, res) => {
     res.send("Facebook Bot Running");
 });
 
 
-// Verify webhook Facebook
+// FACEBOOK WEBHOOK VERIFY
 app.get("/webhook", (req, res) => {
 
     const mode = req.query["hub.mode"];
     const token = req.query["hub.verify_token"];
     const challenge = req.query["hub.challenge"];
 
+    console.log("==== VERIFY WEBHOOK ====");
+    console.log("TOKEN FACEBOOK:", token);
+    console.log("TOKEN SERVER:", VERIFY_TOKEN);
+
     if (mode && token === VERIFY_TOKEN) {
 
-        console.log("Webhook verified");
+        console.log("WEBHOOK VERIFIED");
 
         return res.status(200).send(challenge);
     }
+
+    console.log("VERIFY FAILED");
 
     return res.sendStatus(403);
 });
 
 
-// Nhận comment Facebook
+// RECEIVE FACEBOOK EVENTS
 app.post("/webhook", async (req, res) => {
 
     try {
@@ -51,13 +59,15 @@ app.post("/webhook", async (req, res) => {
             const value = change.value;
 
             const commentId = value.comment_id;
+
             const message = value.message || "";
 
             const fromName = value.from?.name || "Unknown";
 
-            console.log("New Comment:", message);
+            console.log("NEW COMMENT:", message);
 
-            // 1. Reply comment
+
+            // REPLY COMMENT
             await axios.post(
                 `https://graph.facebook.com/v23.0/${commentId}/comments`,
                 {
@@ -67,7 +77,7 @@ app.post("/webhook", async (req, res) => {
             );
 
 
-            // 2. Gửi Telegram
+            // SEND TELEGRAM
             await axios.post(
                 `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
                 {
@@ -88,7 +98,7 @@ app.post("/webhook", async (req, res) => {
                 }
             );
 
-            console.log("Done");
+            console.log("DONE");
         }
 
         res.sendStatus(200);
@@ -104,7 +114,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 
-// PORT Render
+// PORT
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
