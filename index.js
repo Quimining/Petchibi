@@ -8,8 +8,8 @@ const app = express();
 app.use(express.json());
 
 
-// DANH SÁCH ĐÃ REPLY
-const repliedUsers = new Set();
+// DANH SÁCH ĐÃ GỬI
+const sentUsers = new Set();
 
 
 // ENV
@@ -71,7 +71,7 @@ app.post("/webhook", async (req, res) => {
 
                 const commentId = value.comment_id;
 
-                const message = (value.message || "").toLowerCase();
+                const message = value.message || "";
 
                 const fromName = value.from?.name || "Unknown";
 
@@ -91,7 +91,7 @@ app.post("/webhook", async (req, res) => {
                 }
 
 
-                // BỎ QUA COMMENT RỖNG
+                // BỎ COMMENT RỖNG
                 if (!message || message.length < 1) {
 
                     console.log("EMPTY COMMENT");
@@ -100,11 +100,12 @@ app.post("/webhook", async (req, res) => {
                 }
 
 
-                // CHỈ REPLY 1 LẦN / 1 NGƯỜI
-                if (!repliedUsers.has(fromId)) {
+                // CHỈ GỬI 1 LẦN / 1 NGƯỜI
+                if (!sentUsers.has(fromId)) {
 
                     try {
 
+                        // REPLY COMMENT
                         await axios.post(
                             `https://graph.facebook.com/v23.0/${commentId}/comments`,
                             {
@@ -114,21 +115,44 @@ app.post("/webhook", async (req, res) => {
                             }
                         );
 
-                        repliedUsers.add(fromId);
-
                         console.log("COMMENT REPLIED");
 
-                    } catch (replyError) {
+
+                        // SEND MESSENGER
+                        await axios.post(
+                            `https://graph.facebook.com/v23.0/me/messages?access_token=${PAGE_TOKEN}`,
+                            {
+                                recipient: {
+                                    id: fromId
+                                },
+                                message: {
+                                    text:
+`💰 Báo giá:
+• 0.9x2m-50 : 250k
+• 0.9x4m-50 : 400k
+
+🎁 Mua 5 tặng 2
+🚚 Miễn phí vận chuyển toàn quốc`
+                                }
+                            }
+                        );
+
+                        console.log("MESSENGER SENT");
+
+
+                        sentUsers.add(fromId);
+
+                    } catch (msgError) {
 
                         console.log(
-                            "REPLY ERROR:",
-                            replyError.response?.data || replyError.message
+                            "MESSAGE ERROR:",
+                            msgError.response?.data || msgError.message
                         );
                     }
                 }
                 else {
 
-                    console.log("ALREADY REPLIED");
+                    console.log("ALREADY SENT");
                 }
 
 
