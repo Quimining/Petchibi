@@ -92,7 +92,7 @@ app.post("/webhook", async (req, res) => {
 
 
                 // BỎ QUA COMMENT RỖNG
-                if (!message || message.length < 2) {
+                if (!message || message.length < 1) {
 
                     console.log("EMPTY COMMENT");
 
@@ -100,14 +100,8 @@ app.post("/webhook", async (req, res) => {
                 }
 
 
-                // CHỈ REPLY KHI CÓ TỪ KHÓA
-                const isPriceQuestion =
-                    message.includes("giá") ||
-                    message.includes("bao nhiêu");
-
-
-                // REPLY 1 LẦN / 1 NGƯỜI
-                if (isPriceQuestion && !repliedUsers.has(fromId)) {
+                // CHỈ REPLY 1 LẦN / 1 NGƯỜI
+                if (!repliedUsers.has(fromId)) {
 
                     try {
 
@@ -115,14 +109,7 @@ app.post("/webhook", async (req, res) => {
                             `https://graph.facebook.com/v23.0/${commentId}/comments`,
                             {
                                 message:
-`Anh/chị xem ib nhé ❤️
-
-💰 Báo giá:
-0.9x2m-50: 250k
-0.9x4m-50: 400k
-
-🎁 Mua 5 tặng 2
-🚚 Miễn phí vận chuyển`,
+`Anh/chị xem ib nhé ❤️,
                                 access_token: PAGE_TOKEN
                             }
                         );
@@ -141,7 +128,7 @@ app.post("/webhook", async (req, res) => {
                 }
                 else {
 
-                    console.log("SKIP REPLY");
+                    console.log("ALREADY REPLIED");
                 }
 
 
