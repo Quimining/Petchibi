@@ -8,6 +8,10 @@ const app = express();
 app.use(express.json());
 
 
+// DANH SÁCH ĐÃ REPLY
+const repliedUsers = new Set();
+
+
 // ENV
 const PAGE_TOKEN = process.env.PAGE_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
@@ -24,7 +28,7 @@ app.get("/", (req, res) => {
 });
 
 
-// FACEBOOK WEBHOOK VERIFY
+// VERIFY WEBHOOK
 app.get("/webhook", (req, res) => {
 
     const mode = req.query["hub.mode"];
@@ -32,8 +36,6 @@ app.get("/webhook", (req, res) => {
     const challenge = req.query["hub.challenge"];
 
     console.log("==== VERIFY WEBHOOK ====");
-    console.log("TOKEN FACEBOOK:", token);
-    console.log("TOKEN SERVER:", VERIFY_TOKEN);
 
     if (mode && token === VERIFY_TOKEN) {
 
@@ -67,7 +69,9 @@ app.post("/webhook", async (req, res) => {
 
                 const value = change.value;
 
-                const message = value.message || "";
+                const commentId = value.comment_id;
+
+                const message = (value.message || "").toLowerCase();
 
                 const fromName = value.from?.name || "Unknown";
 
@@ -96,32 +100,78 @@ app.post("/webhook", async (req, res) => {
                 }
 
 
-                // KHÔNG AUTO REPLY FACEBOOK
-                console.log("SKIP FACEBOOK REPLY");
+                // CHỈ REPLY KHI CÓ TỪ KHÓA
+                const isPriceQuestion =
+                    message.includes("giá") ||
+                    message.includes("bao nhiêu");
 
 
-                // SEND TELEGRAM
-                await axios.post(
-                    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
-                    {
-                        chat_id: CHAT_ID,
-                        text:
-`📢 Có khách mới comment
+                // REPLY 1 LẦN / 1 NGƯỜI
+                if (isPriceQuestion && !repliedUsers.has(fromId)) {
 
-👤 ${fromName}
+                    try {
 
-💬 ${message}
+                        await axios.post(
+                            `https://graph.facebook.com/v23.0/${commentId}/comments`,
+                            {
+                                message:
+`Anh/chị xem ib nhé ❤️
 
 💰 Báo giá:
 0.9x2m-50: 250k
 0.9x4m-50: 400k
 
 🎁 Mua 5 tặng 2
-🚚 Miễn phí vận chuyển`
-                    }
-                );
+🚚 Miễn phí vận chuyển`,
+                                access_token: PAGE_TOKEN
+                            }
+                        );
 
-                console.log("TELEGRAM SENT");
+                        repliedUsers.add(fromId);
+
+                        console.log("COMMENT REPLIED");
+
+                    } catch (replyError) {
+
+                        console.log(
+                            "REPLY ERROR:",
+                            replyError.response?.data || replyError.message
+                        );
+                    }
+                }
+                else {
+
+                    console.log("SKIP REPLY");
+                }
+
+
+                // SEND TELEGRAM
+                try {
+
+                    await axios.post(
+                        `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
+                        {
+                            chat_id: CHAT_ID,
+                            text:
+`📢 Có khách mới comment
+
+👤 ${fromName}
+
+💬 ${message}
+
+🆔 ${fromId}`
+                        }
+                    );
+
+                    console.log("TELEGRAM SENT");
+
+                } catch (telegramError) {
+
+                    console.log(
+                        "TELEGRAM ERROR:",
+                        telegramError.response?.data || telegramError.message
+                    );
+                }
             }
         }
 
