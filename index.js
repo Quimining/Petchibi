@@ -109,7 +109,7 @@ app.post("/webhook", async (req, res) => {
                             `https://graph.facebook.com/v23.0/${commentId}/comments`,
                             {
                                 message:
-`Anh/chị xem ib nhé ❤️,
+`Dạ em đã nhắn tin riêng mình rồi nhé ❤️`,
                                 access_token: PAGE_TOKEN
                             }
                         );
